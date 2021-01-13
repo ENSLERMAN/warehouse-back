@@ -10,6 +10,7 @@ var Router *gin.Engine
 func StartServer() {
 	Router = gin.New()
 	Router.Use(gin.Recovery())
+	Router.Use(gin.Logger())
 	Router.Use(cors())
 	Router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "ping ok!")

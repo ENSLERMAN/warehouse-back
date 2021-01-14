@@ -1,13 +1,19 @@
 package service
 
 import (
+	"database/sql"
 	"github.com/ENSLERMAN/warehouse-back/internal/handlers"
 	"github.com/gin-gonic/gin"
 )
 
-var Router *gin.Engine
+var (
+	Router *gin.Engine
+	db     *sql.DB
+)
 
 func StartServer() {
+	db = initDB()
+
 	Router = gin.New()
 	Router.Use(gin.Recovery())
 	Router.Use(gin.Logger())
@@ -15,11 +21,17 @@ func StartServer() {
 	Router.GET("/ping", func(c *gin.Context) {
 		c.String(200, "ping ok!")
 	})
-	v1 := Router.Group("/api/v1")
+	nonAuth := Router.Group("/static")
 	{
-		v1.GET("/users", handlers.GetAllUsers)
+		nonAuth.POST("/register", handlers.Register)
+		nonAuth.POST("/login", handlers.Login)
+	}
+	v1 := Router.Group("/api/v1", gin.BasicAuth(gin.Accounts{
+		"admin": "root",
+	}))
+	{
+		v1.GET("/users", handlers.GetAllUsers(db))
 		v1.GET("/users:id", handlers.GetUserByID)
-		v1.POST("/login", handlers.GetUserByID)
 	}
 }
 

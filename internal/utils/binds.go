@@ -33,6 +33,20 @@ func BindServiceError(ctx *gin.Context, err error, description string) {
 	ctx.AbortWithStatusJSON(errJSON.Code, errJSON)
 }
 
+func BindDatabaseError(ctx *gin.Context, err error, description string) {
+	var errJSON struct {
+		Code        int    `json:"code"`
+		Err         string `json:"error"`
+		Description string `json:"description"`
+	}
+	errJSON.Err = err.Error()
+	errJSON.Code = http.StatusUnprocessableEntity
+	if description != "" {
+		errJSON.Description = description
+	}
+	ctx.AbortWithStatusJSON(errJSON.Code, errJSON)
+}
+
 func BindNoContent(ctx *gin.Context) {
 	ctx.String(http.StatusNoContent, "")
 }

@@ -2,21 +2,41 @@ package handlers
 
 import (
 	"database/sql"
+	"github.com/ENSLERMAN/warehouse-back/internal/models"
 	"github.com/ENSLERMAN/warehouse-back/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
-func Login(ctx *gin.Context) {
-	var user struct {
-		Login    string `json:"login" db:"login" binding:"required"`
-		Password string `json:"password" db:"password" binding:"required"`
+func Login(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		var user struct {
+			Login    string `json:"login" db:"login" binding:"required"`
+			Password string `json:"password" db:"password" binding:"required"`
+		}
+		err := ctx.ShouldBindJSON(&user)
+		if err != nil {
+			utils.BindValidationError(ctx, err, "body validation error")
+			return
+		}
+
+		result := db.QueryRow(`select login, password from warehouse.users where login = $1;`, user.Login)
+		if err := result.Err(); err != nil {
+			utils.BindServiceError(ctx, err, "")
+			return
+		}
+		dbUser := &models.User{}
+		if err = result.Scan(&dbUser.Login, &dbUser.Password); err != nil {
+			utils.BindServiceError(ctx, err, "error in scan sql row")
+			return
+		}
+
+		if utils.CheckPasswordHash(user.Password, dbUser.Password) {
+			utils.BindUnauthorized(ctx, nil, "user or password is incorrect")
+			return
+		}
+
+		utils.BindNoContent(ctx)
 	}
-	err := ctx.ShouldBindJSON(&user)
-	if err != nil {
-		utils.BindValidationError(ctx, err, "body validation error")
-		return
-	}
-	utils.BindNoContent(ctx)
 }
 
 func Register(db *sql.DB) func(ctx *gin.Context) {
@@ -38,7 +58,38 @@ func Register(db *sql.DB) func(ctx *gin.Context) {
 		if err != nil {
 			utils.BindServiceError(ctx, err, "cannot hash password")
 		}
-		_, err = db.Exec(`call register_user($1, $2, $3, $4, $5, $6);`,
+		_, err = db.Exec(`call warehouse.register_user($1, $2, $3, $4, $5, $6);`,
+			&user.Surname,
+			&user.Name,
+			&user.Patronymic,
+			&user.Login,
+			password,
+			2,
+		)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "")
+			return
+		}
+
+		utils.BindNoContent(ctx)
+	}
+}
+
+func Me(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		var user struct {
+			Surname    string `json:"surname" db:"surname" binding:"required"`
+			Name       string `json:"name" db:"name" binding:"required"`
+			Patronymic string `json:"patronymic" db:"patronymic" binding:"required"`
+			AccessName string `json:"access"`
+		}
+		err := ctx.ShouldBindJSON(&user)
+		if err != nil {
+			utils.BindValidationError(ctx, err, "body validation error")
+			return
+		}
+
+		_, err = db.Exec(`call warehouse.register_user($1, $2, $3, $4, $5, $6);`,
 			&user.Surname,
 			&user.Name,
 			&user.Patronymic,

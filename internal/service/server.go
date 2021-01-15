@@ -24,7 +24,7 @@ func StartServer() {
 	nonAuth := Router.Group("/static")
 	{
 		nonAuth.POST("/register", handlers.Register(db))
-		nonAuth.POST("/login", handlers.Login)
+		nonAuth.POST("/login", handlers.Login(db))
 	}
 	v1 := Router.Group("/api/v1", gin.BasicAuth(gin.Accounts{
 		"admin": "develop",

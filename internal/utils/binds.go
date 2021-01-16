@@ -19,6 +19,7 @@ func BindValidationError(ctx *gin.Context, err error, description string) {
 		errJSON.Description = description
 	}
 	ctx.AbortWithStatusJSON(errJSON.Code, errJSON)
+	ctx.Abort()
 }
 
 func BindServiceError(ctx *gin.Context, err error, description string) {
@@ -35,6 +36,7 @@ func BindServiceError(ctx *gin.Context, err error, description string) {
 		errJSON.Description = description
 	}
 	ctx.AbortWithStatusJSON(errJSON.Code, errJSON)
+	ctx.Abort()
 }
 
 func BindDatabaseError(ctx *gin.Context, err error, description string) {
@@ -51,6 +53,7 @@ func BindDatabaseError(ctx *gin.Context, err error, description string) {
 		errJSON.Description = description
 	}
 	ctx.AbortWithStatusJSON(errJSON.Code, errJSON)
+	ctx.Abort()
 }
 
 func BindNoContent(ctx *gin.Context) {
@@ -75,4 +78,5 @@ func BindUnauthorized(ctx *gin.Context, err error, description string) {
 		errJSON.Description = description
 	}
 	ctx.JSON(http.StatusUnauthorized, errJSON)
+	ctx.Abort()
 }

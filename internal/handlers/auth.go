@@ -75,13 +75,10 @@ func Register(db *sql.DB) func(ctx *gin.Context) {
 	}
 }
 
-func Me(db *sql.DB) func(ctx *gin.Context) {
+func ShowMe(db *sql.DB) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		var user struct {
-			Surname    string `json:"surname" db:"surname" binding:"required"`
-			Name       string `json:"name" db:"name" binding:"required"`
-			Patronymic string `json:"patronymic" db:"patronymic" binding:"required"`
-			AccessName string `json:"access"`
+			Login string `json:"login" db:"login" binding:"required"`
 		}
 		err := ctx.ShouldBindJSON(&user)
 		if err != nil {
@@ -89,19 +86,26 @@ func Me(db *sql.DB) func(ctx *gin.Context) {
 			return
 		}
 
-		_, err = db.Exec(`call warehouse.register_user($1, $2, $3, $4, $5, $6);`,
-			&user.Surname,
-			&user.Name,
-			&user.Patronymic,
-			&user.Login,
-			password,
-			2,
-		)
-		if err != nil {
-			utils.BindDatabaseError(ctx, err, "")
+		result := db.QueryRow(`call warehouse.showinfobyme($1);`, &user.Login)
+		if result.Err() != nil {
+			utils.BindDatabaseError(ctx, result.Err(), "cannot get user data")
 			return
 		}
 
-		utils.BindNoContent(ctx)
+		var dbRes struct {
+			UserID     int64  `json:"user_id" db:"user_id"`
+			Surname    string `json:"surname" db:"surname"`
+			Name       string `json:"name" db:"name"`
+			Pat        string `json:"patronymic" db:"patronymic"`
+			AccessID   int64  `json:"access_id" db:"access_id"`
+			AccessName string `json:"access_name" db:"access_name"`
+		}
+
+		if err := result.Scan(&dbRes); err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get data from db")
+			return
+		}
+
+		utils.BindData(ctx, &dbRes)
 	}
 }

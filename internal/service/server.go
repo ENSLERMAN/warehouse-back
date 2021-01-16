@@ -1,38 +1,35 @@
 package service
 
 import (
-	"database/sql"
 	"github.com/ENSLERMAN/warehouse-back/internal/handlers"
 	"github.com/gin-gonic/gin"
 )
 
-var (
-	Router *gin.Engine
-	db     *sql.DB
-)
+func StartServer() *gin.Engine {
+	db := initDB()
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(gin.Logger())
+	r.Use(cors())
+	r.Use()
 
-func StartServer() {
-	db = initDB()
-
-	Router = gin.New()
-	Router.Use(gin.Recovery())
-	Router.Use(gin.Logger())
-	Router.Use(cors())
-	Router.GET("/ping", func(c *gin.Context) {
+	r.GET("/ping", func(c *gin.Context) {
 		c.String(200, "ping ok!")
 	})
-	nonAuth := Router.Group("/static")
+	nonAuth := r.Group("/static")
 	{
 		nonAuth.POST("/register", handlers.Register(db))
 		nonAuth.POST("/login", handlers.Login(db))
 	}
-	v1 := Router.Group("/api/v1", gin.BasicAuth(gin.Accounts{
+	v1 := r.Group("/api/v1", gin.BasicAuth(gin.Accounts{
 		"admin": "develop",
 	}))
 	{
 		v1.GET("/users", handlers.GetAllUsers(db))
 		v1.GET("/users:id", handlers.GetUserByID)
+		v1.GET("/me", handlers.ShowMe(db))
 	}
+	return r
 }
 
 func cors() gin.HandlerFunc {

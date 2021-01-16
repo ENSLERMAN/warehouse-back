@@ -18,8 +18,8 @@ func main() {
 	if !exist {
 		logrus.Fatalf("PORT not exist in .env")
 	}
-	service.StartServer()
-	if err := service.Router.Run(port); err != nil {
+	r := service.StartServer()
+	if err := r.Run(port); err != nil {
 		logrus.Fatalf("cannot start server: %v", err)
 	}
 }

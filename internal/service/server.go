@@ -21,13 +21,14 @@ func StartServer() *gin.Engine {
 		nonAuth.POST("/register", handlers.Register(db))
 		nonAuth.POST("/login", handlers.Login(db))
 	}
-	v1 := r.Group("/api/v1", gin.BasicAuth(gin.Accounts{
+	v1 := r.Group("/api", gin.BasicAuth(gin.Accounts{
 		"admin": "develop",
 	}))
 	{
 		v1.GET("/users", handlers.GetAllUsers(db))
 		v1.GET("/users:id", handlers.GetUserByID)
 		v1.GET("/me", handlers.ShowMe(db))
+		v1.POST("/update_role", handlers.UpdateRole(db))
 	}
 	return r
 }

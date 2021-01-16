@@ -86,7 +86,7 @@ func ShowMe(db *sql.DB) func(ctx *gin.Context) {
 			return
 		}
 
-		result := db.QueryRow(`call warehouse.showinfobyme($1);`, &user.Login)
+		result := db.QueryRow(`select * from warehouse.showinfobyme($1);`, &user.Login)
 		if result.Err() != nil {
 			utils.BindDatabaseError(ctx, result.Err(), "cannot get user data")
 			return
@@ -97,11 +97,20 @@ func ShowMe(db *sql.DB) func(ctx *gin.Context) {
 			Surname    string `json:"surname" db:"surname"`
 			Name       string `json:"name" db:"name"`
 			Pat        string `json:"patronymic" db:"patronymic"`
+			Login      string `json:"login" db:"patronymic"`
 			AccessID   int64  `json:"access_id" db:"access_id"`
 			AccessName string `json:"access_name" db:"access_name"`
 		}
 
-		if err := result.Scan(&dbRes); err != nil {
+		if err := result.Scan(
+			&dbRes.UserID,
+			&dbRes.Surname,
+			&dbRes.Name,
+			&dbRes.Pat,
+			&dbRes.Login,
+			&dbRes.AccessID,
+			&dbRes.AccessName,
+		); err != nil {
 			utils.BindDatabaseError(ctx, err, "cannot get data from db")
 			return
 		}

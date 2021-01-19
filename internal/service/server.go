@@ -36,6 +36,13 @@ func StartServer() *gin.Engine {
 	{
 		shipments.POST("/new_shipment", handlers.AddNewShipment(db))
 	}
+	dispatch := r.Group("/api/dispatch", gin.BasicAuth(gin.Accounts{
+		"admin": "develop",
+	}))
+	{
+		dispatch.POST("/new_dispatch", handlers.AddNewDispatch(db))
+		dispatch.POST("/close_dispatch", handlers.CloseDispatch(db))
+	}
 	return r
 }
 

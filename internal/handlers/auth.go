@@ -34,7 +34,6 @@ func Login(db *sql.DB) func(ctx *gin.Context) {
 			utils.BindUnauthorized(ctx, nil, "user or password is incorrect")
 			return
 		}
-
 		utils.BindNoContent(ctx)
 	}
 }
@@ -77,16 +76,13 @@ func Register(db *sql.DB) func(ctx *gin.Context) {
 
 func ShowMe(db *sql.DB) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
-		var user struct {
-			Login string `json:"login" db:"login" binding:"required"`
-		}
-		err := ctx.ShouldBindJSON(&user)
+		login, err := utils.GetLoginFromHeader(ctx)
 		if err != nil {
-			utils.BindValidationError(ctx, err, "body validation error")
+			utils.BindUnauthorized(ctx, err, "cannot get Authorization header")
 			return
 		}
 
-		result := db.QueryRow(`select * from warehouse.showinfobyme($1);`, &user.Login)
+		result := db.QueryRow(`select * from warehouse.showinfobyme($1);`, &login)
 		if result.Err() != nil {
 			utils.BindDatabaseError(ctx, result.Err(), "cannot get user data")
 			return

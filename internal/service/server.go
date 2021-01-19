@@ -3,8 +3,10 @@ package service
 import (
 	"database/sql"
 	"github.com/ENSLERMAN/warehouse-back/internal/handlers"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"time"
 )
 
 func StartServer() *gin.Engine {
@@ -12,7 +14,17 @@ func StartServer() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
-	r.Use(cors())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:4200"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "x-requested-with", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			return origin == "http://localhost:4200"
+		},
+		MaxAge: 12 * time.Hour,
+	}))
 
 	accs := initBasicAuthLogins(db)
 
@@ -28,7 +40,6 @@ func StartServer() *gin.Engine {
 	{
 		users.GET("/users", handlers.GetAllUsers(db))
 		users.GET("/users:id", handlers.GetUserByID)
-		users.GET("/me", handlers.ShowMe(db))
 		users.POST("/update_role", handlers.UpdateRole(db))
 	}
 	shipments := r.Group("/api/shipments", basicAuth(accs))
@@ -41,13 +52,6 @@ func StartServer() *gin.Engine {
 		dispatch.POST("/close_dispatch", handlers.CloseDispatch(db))
 	}
 	return r
-}
-
-func cors() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		ctx.Writer.Header().Add("Access-Control-Allow-Origin", "*")
-		ctx.Next()
-	}
 }
 
 func initBasicAuthLogins(db *sql.DB) gin.Accounts {

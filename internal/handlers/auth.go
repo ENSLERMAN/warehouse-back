@@ -21,12 +21,12 @@ func Login(db *sql.DB) func(ctx *gin.Context) {
 
 		result := db.QueryRow(`select login, password from warehouse.users where login = $1;`, user.Login)
 		if err := result.Err(); err != nil {
-			utils.BindServiceError(ctx, err, "")
+			utils.BindUnauthorized(ctx, err, "")
 			return
 		}
 		dbUser := &models.User{}
 		if err = result.Scan(&dbUser.Login, &dbUser.Password); err != nil {
-			utils.BindServiceError(ctx, err, "error in scan sql row")
+			utils.BindUnauthorized(ctx, err, "error in scan sql row")
 			return
 		}
 
@@ -34,7 +34,37 @@ func Login(db *sql.DB) func(ctx *gin.Context) {
 			utils.BindUnauthorized(ctx, nil, "user or password is incorrect")
 			return
 		}
-		utils.BindNoContent(ctx)
+
+		result1 := db.QueryRow(`select * from warehouse.showinfobyme($1);`, &user.Login)
+		if result1.Err() != nil {
+			utils.BindDatabaseError(ctx, result1.Err(), "cannot get user data")
+			return
+		}
+
+		var dbRes struct {
+			UserID     int64  `json:"user_id" db:"user_id"`
+			Surname    string `json:"surname" db:"surname"`
+			Name       string `json:"name" db:"name"`
+			Pat        string `json:"patronymic" db:"patronymic"`
+			Login      string `json:"login" db:"patronymic"`
+			AccessID   int64  `json:"access_id" db:"access_id"`
+			AccessName string `json:"access_name" db:"access_name"`
+		}
+
+		if err := result1.Scan(
+			&dbRes.UserID,
+			&dbRes.Surname,
+			&dbRes.Name,
+			&dbRes.Pat,
+			&dbRes.Login,
+			&dbRes.AccessID,
+			&dbRes.AccessName,
+		); err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get data from db")
+			return
+		}
+
+		utils.BindData(ctx, &dbRes)
 	}
 }
 
@@ -71,46 +101,5 @@ func Register(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		utils.BindNoContent(ctx)
-	}
-}
-
-func ShowMe(db *sql.DB) func(ctx *gin.Context) {
-	return func(ctx *gin.Context) {
-		login, err := utils.GetLoginFromHeader(ctx)
-		if err != nil {
-			utils.BindUnauthorized(ctx, err, "cannot get Authorization header")
-			return
-		}
-
-		result := db.QueryRow(`select * from warehouse.showinfobyme($1);`, &login)
-		if result.Err() != nil {
-			utils.BindDatabaseError(ctx, result.Err(), "cannot get user data")
-			return
-		}
-
-		var dbRes struct {
-			UserID     int64  `json:"user_id" db:"user_id"`
-			Surname    string `json:"surname" db:"surname"`
-			Name       string `json:"name" db:"name"`
-			Pat        string `json:"patronymic" db:"patronymic"`
-			Login      string `json:"login" db:"patronymic"`
-			AccessID   int64  `json:"access_id" db:"access_id"`
-			AccessName string `json:"access_name" db:"access_name"`
-		}
-
-		if err := result.Scan(
-			&dbRes.UserID,
-			&dbRes.Surname,
-			&dbRes.Name,
-			&dbRes.Pat,
-			&dbRes.Login,
-			&dbRes.AccessID,
-			&dbRes.AccessName,
-		); err != nil {
-			utils.BindDatabaseError(ctx, err, "cannot get data from db")
-			return
-		}
-
-		utils.BindData(ctx, &dbRes)
 	}
 }

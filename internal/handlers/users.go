@@ -2,34 +2,12 @@ package handlers
 
 import (
 	"database/sql"
+	"errors"
 	"github.com/ENSLERMAN/warehouse-back/internal/models"
 	"github.com/ENSLERMAN/warehouse-back/internal/utils"
 	"github.com/gin-gonic/gin"
-
-	"github.com/sirupsen/logrus"
+	"strconv"
 )
-
-func GetAllUsers(db *sql.DB) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		result, err := db.Query("select * from Warehouse.Users")
-		if err != nil {
-			logrus.Error(err)
-		}
-		users := make([]*models.User, 0)
-		for result.Next() {
-			user := new(models.User)
-			err := result.Scan(&user.ID, &user.Surname, &user.Name, &user.Patronymic, &user.Login, &user.Password, &user.Access)
-			if err != nil {
-				logrus.Error(err)
-			}
-			users = append(users, user)
-		}
-		if err = result.Err(); err != nil {
-			logrus.Error(err)
-		}
-		c.JSON(200, &users)
-	}
-}
 
 func GetUserByID(c *gin.Context) {
 	c.String(200, "get user by id")
@@ -57,5 +35,48 @@ func UpdateRole(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		utils.BindNoContent(ctx)
+	}
+}
+
+func GetUsersByAccess(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		idString := ctx.Query("access_id")
+		if idString == "" {
+			utils.BindValidationError(ctx, errors.New("query param 'access_id' is required"), "")
+			return
+		}
+		id, err := strconv.ParseInt(idString, 10, 64)
+		if err != nil {
+			utils.BindServiceError(ctx, err, err.Error())
+			return
+		}
+		users := make([]models.User, 0)
+		result, err := db.Query(`select id, surname, name, patronymic, login, access
+			from warehouse.users where access = $1 and is_delete = false;`, id,
+		)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get suppliers")
+			return
+		}
+		for result.Next() {
+			user := new(models.User)
+			err := result.Scan(&user.ID, &user.Surname, &user.Name, &user.Patronymic, &user.Login, &user.Access)
+			if err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get suppliers")
+				return
+			}
+			users = append(users, *user)
+		}
+		if err = result.Err(); err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get suppliers")
+			return
+		}
+
+		if len(users) == 0 {
+			utils.BindNoContent(ctx)
+			return
+		}
+
+		utils.BindData(ctx, users)
 	}
 }

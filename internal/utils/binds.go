@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"net/http"
 )
 
@@ -13,6 +14,7 @@ func BindValidationError(ctx *gin.Context, err error, description string) {
 	}
 	if err != nil {
 		errJSON.Err = err.Error()
+		logrus.Error(err)
 	}
 	errJSON.Code = http.StatusBadRequest
 	if description != "" {
@@ -30,6 +32,7 @@ func BindServiceError(ctx *gin.Context, err error, description string) {
 	}
 	if err != nil {
 		errJSON.Err = err.Error()
+		logrus.Error(err)
 	}
 	errJSON.Code = http.StatusInternalServerError
 	if description != "" {
@@ -47,6 +50,7 @@ func BindDatabaseError(ctx *gin.Context, err error, description string) {
 	}
 	if err != nil {
 		errJSON.Err = err.Error()
+		logrus.Error(err)
 	}
 	errJSON.Code = http.StatusUnprocessableEntity
 	if description != "" {
@@ -72,6 +76,7 @@ func BindUnauthorized(ctx *gin.Context, err error, description string) {
 	}
 	if err != nil {
 		errJSON.Err = err.Error()
+		logrus.Error(err)
 	}
 	errJSON.Code = http.StatusUnauthorized
 	if description != "" {

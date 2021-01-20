@@ -38,13 +38,14 @@ func StartServer() *gin.Engine {
 	}
 	users := r.Group("/api/user", basicAuth(accs))
 	{
-		users.GET("/users", handlers.GetAllUsers(db))
 		users.GET("/users:id", handlers.GetUserByID)
 		users.POST("/update_role", handlers.UpdateRole(db))
+		users.GET("/users", handlers.GetUsersByAccess(db))
 	}
 	shipments := r.Group("/api/shipments", basicAuth(accs))
 	{
 		shipments.POST("/new_shipment", handlers.AddNewShipment(db))
+		shipments.GET("/all", handlers.GetAllShipments(db))
 	}
 	dispatch := r.Group("/api/dispatch", basicAuth(accs))
 	{

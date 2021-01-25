@@ -20,7 +20,7 @@ func AddNewShipment(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		type Shipment struct {
-			Date       string    `json:"date" validate:"required,gt=0"`
+			Date       string    `json:"date"`
 			SupplierID int64     `json:"supplier_id" validate:"required,gt=0"`
 			EmpID      int64     `json:"emp_id" validate:"required,gt=0"`
 			Products   []Product `json:"products" validate:"required,gt=0,dive"`
@@ -38,7 +38,7 @@ func AddNewShipment(db *sql.DB) func(ctx *gin.Context) {
 			utils.BindValidationError(ctx, err, "body validation error")
 			return
 		}
-
+		ship.Date = utils.GetNowByMoscow()
 		shipmentJSON, err := jsoniter.Marshal(&ship)
 		if err != nil {
 			utils.BindValidationError(ctx, err, "body validation error")

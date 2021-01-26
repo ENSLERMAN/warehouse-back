@@ -3,10 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/ENSLERMAN/warehouse-back/internal/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	jsoniter "github.com/json-iterator/go"
+	"strconv"
 )
 
 func AddNewDispatch(db *sql.DB) func(ctx *gin.Context) {
@@ -95,5 +97,103 @@ func CloseDispatch(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		utils.BindNoContent(ctx)
+	}
+}
+
+func GetDispatches(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		type dispatch struct {
+			DisID        int64   `json:"dispatch_id" db:"dispatch_id"`
+			EmpID        *int64  `json:"emp_id" db:"emp_id"`
+			EmpSurname   *string `json:"emp_surname" db:"emp_surname"`
+			EmpName      *string `json:"emp_name" db:"emp_name"`
+			EmpPat       *string `json:"emp_pat" db:"emp_pat"`
+			StatusID     int64   `json:"status_id" db:"status_id"`
+			StatusName   string  `json:"status_name" db:"status_name"`
+			DispatchDate string  `json:"dispatch_date" db:"dispatch_date"`
+			CusID        int64   `json:"cus_id" db:"cus_id"`
+			CusSurname   string  `json:"cus_surname" db:"cus_surname"`
+			CusName      string  `json:"cus_name" db:"cus_name"`
+			CusPat       string  `json:"cus_pat" db:"cus_pat"`
+		}
+
+		result, err := db.Query(`select * from warehouse.get_dispatches();`)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get dispatches")
+			return
+		}
+		dispatches := make([]dispatch, 0)
+		for result.Next() {
+			dis := new(dispatch)
+			if err := result.Scan(
+				&dis.DisID,
+				&dis.EmpID,
+				&dis.EmpSurname,
+				&dis.EmpName,
+				&dis.EmpPat,
+				&dis.StatusID,
+				&dis.StatusName,
+				&dis.DispatchDate,
+				&dis.CusID,
+				&dis.CusSurname,
+				&dis.CusName,
+				&dis.CusPat,
+			); err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get dispatches")
+				return
+			}
+			dispatches = append(dispatches, *dis)
+		}
+		utils.BindData(ctx, dispatches)
+	}
+}
+
+func GetProductsInDispatch(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		idString := ctx.Query("dis_id")
+		if idString == "" {
+			utils.BindValidationError(ctx, errors.New("query param 'dis_id' is required"), "")
+			return
+		}
+		id, err := strconv.ParseInt(idString, 10, 64)
+		if err != nil {
+			utils.BindServiceError(ctx, err, err.Error())
+			return
+		}
+
+		type products struct {
+			ProdID      int64  `json:"product_id" db:"product_id"`
+			ProdAmount  int64  `json:"product_amount" db:"product_amount"`
+			ProdName    string `json:"product_name" db:"product_name"`
+			ProdDes     string `json:"product_des" db:"product_description"`
+			ProrBarcode string `json:"product_barcode" db:"product_barcode"`
+		}
+
+		prods := make([]products, 0)
+		result, err := db.Query(`select * from warehouse.get_products_by_dispatch($1);`, id)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get products by dispatch "+idString)
+			return
+		}
+		for result.Next() {
+			prod := new(products)
+			err := result.Scan(&prod.ProdID, &prod.ProdAmount, &prod.ProdName, &prod.ProdDes, &prod.ProrBarcode)
+			if err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get products by dispatch "+idString)
+				return
+			}
+			prods = append(prods, *prod)
+		}
+		if err = result.Err(); err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get products by dispatch "+idString)
+			return
+		}
+
+		if len(prods) == 0 {
+			utils.BindNoContent(ctx)
+			return
+		}
+
+		utils.BindData(ctx, prods)
 	}
 }

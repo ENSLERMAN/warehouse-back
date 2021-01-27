@@ -41,6 +41,8 @@ func StartServer() *gin.Engine {
 		users.GET("/users:id", handlers.GetUserByID)
 		users.POST("/update_role", handlers.UpdateRole(db))
 		users.GET("/users", handlers.GetUsersByAccess(db))
+		users.GET("/all", handlers.GetUsers(db))
+		users.GET("/roles", handlers.GetRoles(db))
 	}
 	shipments := r.Group("/api/shipments", basicAuth(accs))
 	{

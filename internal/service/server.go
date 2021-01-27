@@ -58,6 +58,9 @@ func StartServer() *gin.Engine {
 	products := r.Group("/api/products", basicAuth(accs))
 	{
 		products.GET("/get", handlers.GetProducts(db))
+		products.GET("/getByID", handlers.GetProductsByID(db))
+		products.POST("/update", handlers.UpdateProduct(db))
+		products.GET("/delete", handlers.DeleteProductsByID(db))
 	}
 	return r
 }

@@ -92,7 +92,7 @@ func CloseDispatch(db *sql.DB) func(ctx *gin.Context) {
 		rawMsg := json.RawMessage(disJSON)
 		_, err = db.Exec(`select * from warehouse.close_dispatch($1);`, rawMsg)
 		if err != nil {
-			utils.BindDatabaseError(ctx, err, "cannot make new dispatch")
+			utils.BindDatabaseError(ctx, err, "cannot close dispatch")
 			return
 		}
 
@@ -162,6 +162,7 @@ func GetProductsInDispatch(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		type products struct {
+			CusID       int64  `json:"cus_id" db:"customer_id"`
 			ProdID      int64  `json:"product_id" db:"product_id"`
 			ProdAmount  int64  `json:"product_amount" db:"product_amount"`
 			ProdName    string `json:"product_name" db:"product_name"`
@@ -177,7 +178,7 @@ func GetProductsInDispatch(db *sql.DB) func(ctx *gin.Context) {
 		}
 		for result.Next() {
 			prod := new(products)
-			err := result.Scan(&prod.ProdID, &prod.ProdAmount, &prod.ProdName, &prod.ProdDes, &prod.ProrBarcode)
+			err := result.Scan(&prod.CusID, &prod.ProdID, &prod.ProdAmount, &prod.ProdName, &prod.ProdDes, &prod.ProrBarcode)
 			if err != nil {
 				utils.BindDatabaseError(ctx, err, "cannot get products by dispatch "+idString)
 				return
@@ -195,5 +196,43 @@ func GetProductsInDispatch(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		utils.BindData(ctx, prods)
+	}
+}
+
+func RefuseDispatch(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		type Dispatch struct {
+			Date  string
+			EmpID int64 `json:"emp_id" validate:"required,gt=0"`
+			CusID int64 `json:"cus_id" validate:"required,gt=0"`
+			DisID int64 `json:"dis_id" validate:"required,gt=0"`
+		}
+
+		var dis = new(Dispatch)
+		err := ctx.ShouldBindJSON(&dis)
+		if err != nil {
+			utils.BindValidationError(ctx, err, "body validation error")
+			return
+		}
+
+		validate := validator.New()
+		err = validate.Struct(dis)
+		if err != nil {
+			utils.BindValidationError(ctx, err, "body validation error")
+			return
+		}
+		dis.Date = utils.GetNowByMoscow()
+		_, err = db.Exec(`select * from warehouse.refuse_dispatch($1, $2, $3, $4);`,
+			&dis.DisID,
+			&dis.EmpID,
+			&dis.CusID,
+			&dis.Date,
+		)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot refuse dispatch")
+			return
+		}
+
+		utils.BindNoContent(ctx)
 	}
 }

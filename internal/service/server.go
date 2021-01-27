@@ -53,6 +53,7 @@ func StartServer() *gin.Engine {
 		dispatch.POST("/close_dispatch", handlers.CloseDispatch(db))
 		dispatch.GET("/all", handlers.GetDispatches(db))
 		dispatch.GET("/products", handlers.GetProductsInDispatch(db))
+		dispatch.POST("/refuse", handlers.RefuseDispatch(db))
 	}
 	products := r.Group("/api/products", basicAuth(accs))
 	{

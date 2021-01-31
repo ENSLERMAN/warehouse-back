@@ -48,6 +48,7 @@ func StartServer() *gin.Engine {
 	{
 		shipments.POST("/new_shipment", handlers.AddNewShipment(db))
 		shipments.GET("/all", handlers.GetAllShipments(db))
+		shipments.GET("/history", handlers.GetAllShipments(db))
 	}
 	dispatch := r.Group("/api/dispatch", basicAuth(accs))
 	{
@@ -55,6 +56,7 @@ func StartServer() *gin.Engine {
 		dispatch.POST("/close_dispatch", handlers.CloseDispatch(db))
 		dispatch.GET("/all", handlers.GetDispatches(db))
 		dispatch.GET("/products", handlers.GetProductsInDispatch(db))
+		dispatch.GET("/history", handlers.GetHistoryDispatches(db))
 		dispatch.POST("/refuse", handlers.RefuseDispatch(db))
 	}
 	products := r.Group("/api/products", basicAuth(accs))

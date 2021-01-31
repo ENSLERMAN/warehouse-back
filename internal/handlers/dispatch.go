@@ -148,6 +148,54 @@ func GetDispatches(db *sql.DB) func(ctx *gin.Context) {
 	}
 }
 
+func GetHistoryDispatches(db *sql.DB) func(ctx *gin.Context) {
+	return func(ctx *gin.Context) {
+		type dispatch struct {
+			DisID        int64   `json:"dispatch_id" db:"dispatch_id"`
+			DispatchDate string  `json:"dispatch_date" db:"dispatch_date"`
+			EmpID        *int64  `json:"emp_id" db:"emp_id"`
+			EmpSurname   *string `json:"emp_surname" db:"emp_surname"`
+			EmpName      *string `json:"emp_name" db:"emp_name"`
+			EmpPat       *string `json:"emp_pat" db:"emp_pat"`
+			StatusID     int64   `json:"status_id" db:"status_id"`
+			StatusName   string  `json:"status_name" db:"status_name"`
+			CusID        int64   `json:"cus_id" db:"cus_id"`
+			CusSurname   string  `json:"cus_surname" db:"cus_surname"`
+			CusName      string  `json:"cus_name" db:"cus_name"`
+			CusPat       string  `json:"cus_pat" db:"cus_pat"`
+		}
+
+		result, err := db.Query(`select * from warehouse.get_history_dispatches();`)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get dispatches")
+			return
+		}
+		dispatches := make([]dispatch, 0)
+		for result.Next() {
+			dis := new(dispatch)
+			if err := result.Scan(
+				&dis.DisID,
+				&dis.DispatchDate,
+				&dis.EmpID,
+				&dis.EmpSurname,
+				&dis.EmpName,
+				&dis.EmpPat,
+				&dis.StatusID,
+				&dis.StatusName,
+				&dis.CusID,
+				&dis.CusSurname,
+				&dis.CusName,
+				&dis.CusPat,
+			); err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get dispatches")
+				return
+			}
+			dispatches = append(dispatches, *dis)
+		}
+		utils.BindData(ctx, dispatches)
+	}
+}
+
 func GetProductsInDispatch(db *sql.DB) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		idString := ctx.Query("dis_id")

@@ -15,13 +15,13 @@ func StartServer() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:4200"},
+		AllowOrigins:     []string{"http://enslerman.ru"},
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "x-requested-with", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:4200"
+			return origin == "http://enslerman.ru"
 		},
 		MaxAge: 12 * time.Hour,
 	}))
@@ -63,6 +63,7 @@ func StartServer() *gin.Engine {
 	{
 		products.GET("/get", handlers.GetProducts(db))
 		products.GET("/getByID", handlers.GetProductsByID(db))
+		products.GET("/get_history", handlers.GetProductHistoryByID(db))
 		products.POST("/update", handlers.UpdateProduct(db))
 		products.GET("/delete", handlers.DeleteProductsByID(db))
 	}

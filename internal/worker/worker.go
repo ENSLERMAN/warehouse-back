@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	timer       = 5
+	timer       = 3
 	insertProds = `insert into warehouse.product_history 
 					(dt, product_id, name, description, amount, price, barcode, is_delete) values 
 					($1, $2, $3, $4, $5, $6, $7, $8);`
@@ -266,7 +266,7 @@ func uploadShipments(clickCnn *sql.DB, pgCnn *sql.DB) error { //nolint:dupl
 	dt := utils.GetTimeNowByMoscow()
 	for _, v := range ships {
 		v.EmployeeFIO = fmt.Sprintf("%s %s %s", v.EmployeeSurname, v.EmployeeName, v.EmployeePat)
-		v.SupplierFIO = fmt.Sprintf("%s %s %s", v.SupplierSurname, v.SupplierName, v.SupplierFIO)
+		v.SupplierFIO = fmt.Sprintf("%s %s %s", v.SupplierSurname, v.SupplierName, v.SupplierPat)
 		if _, err = stmt.Exec(
 			dt,
 			v.ID,

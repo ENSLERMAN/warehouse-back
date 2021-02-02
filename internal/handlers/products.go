@@ -113,40 +113,25 @@ func GetProductHistoryByID(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 			return
 		}
 
-		if len(products) == 0 {
-			type ProductClick struct {
-				ID          int64  `json:"id" db:"product_id"`
-				Name        string `json:"name" db:"name"`
-				Description string `json:"description" db:"description"`
-				Amount      int64  `json:"amount" db:"amount"`
-				Price       int64  `json:"price" db:"price"`
-				Barcode     string `json:"barcode" db:"barcode"`
-				IsDelete    bool   `json:"is_delete" db:"is_delete"`
-			}
-			resultClick, err := clickDB.Query(`select product_id, name, description, amount, price, barcode, is_delete
+		resultClick, err := clickDB.Query(`select product_id, name, description, amount, price, barcode, is_delete
 				from warehouse.product_history where product_id = ?;`, id)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get product history by ID from clickhouse")
+			return
+		}
+		defer resultClick.Close()
+		for resultClick.Next() {
+			pr := new(Product)
+			err = resultClick.Scan(&pr.ID, &pr.Name, &pr.Description, &pr.Amount, &pr.Price, &pr.Barcode, &pr.IsDelete)
 			if err != nil {
 				utils.BindDatabaseError(ctx, err, "cannot get product history by ID from clickhouse")
 				return
 			}
-			defer resultClick.Close()
-			productsClick := make([]ProductClick, 0)
-			for resultClick.Next() {
-				pr := new(ProductClick)
-				err = resultClick.Scan(&pr.ID, &pr.Name, &pr.Description, &pr.Amount, &pr.Price, &pr.Barcode, &pr.IsDelete)
-				if err != nil {
-					utils.BindDatabaseError(ctx, err, "cannot get product history by ID from clickhouse")
-					return
-				}
-				productsClick = append(productsClick, *pr)
-			}
+			products = append(products, *pr)
+		}
 
-			if resultClick.Err() != nil {
-				utils.BindDatabaseError(ctx, resultClick.Err(), "cannot get product history by ID")
-				return
-			}
-
-			utils.BindData(ctx, productsClick)
+		if resultClick.Err() != nil {
+			utils.BindDatabaseError(ctx, resultClick.Err(), "cannot get product history by ID")
 			return
 		}
 

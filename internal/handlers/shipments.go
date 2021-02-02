@@ -113,6 +113,8 @@ func GetShipmentsHistory(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 			Date            string `json:"date" db:"date"`
 			ProductBarcode  string `json:"product_barcode" db:"product_barcode"`
 			ProductAmount   int    `json:"product_amount" db:"product_amount"`
+			SupplierFIO     string `json:"supplier_fio" db:"supplier_fio"`
+			EmployeeFIO     string `json:"employee_fio" db:"employee_fio"`
 		}
 
 		result, err := db.Query("select * from warehouse.get_shipments_history();")
@@ -137,54 +139,38 @@ func GetShipmentsHistory(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 			return
 		}
 
-		if len(ships) == 0 {
-			type shipmentClick struct {
-				ID             int64  `json:"id" db:"ship_id"`
-				SupplierID     int64  `json:"supplier_id" db:"supplier_id"`
-				SupplierFIO    string `json:"supplier_fio" db:"supplier_fio"`
-				EmployeeID     int64  `json:"employee_id" db:"employee_id"`
-				EmployeeFIO    string `json:"employee_fio" db:"employee_fio"`
-				Date           string `json:"date" db:"date"`
-				ProductBarcode string `json:"product_barcode" db:"product_barcode"`
-				ProductAmount  int    `json:"product_amount" db:"product_amount"`
-			}
-
-			resultClick, err := clickDB.Query(`
+		resultClick, err := clickDB.Query(`
 				select 
 				ship_id, supplier_id, supplier_fio, employee_id, employee_fio, date, product_barcode, product_amount
 				from warehouse.shipment_history;
 			`)
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get shipments")
+			return
+		}
+		for resultClick.Next() {
+			s := new(shipment)
+			err = resultClick.Scan(
+				&s.ID,
+				&s.SupplierID,
+				&s.SupplierFIO,
+				&s.EmployeeID,
+				&s.EmployeeFIO,
+				&s.Date,
+				&s.ProductBarcode,
+				&s.ProductAmount,
+			)
 			if err != nil {
 				utils.BindDatabaseError(ctx, err, "cannot get shipments")
 				return
 			}
-			shipsClick := make([]shipmentClick, 0)
-			for resultClick.Next() {
-				s := new(shipmentClick)
-				err = resultClick.Scan(
-					&s.ID,
-					&s.SupplierID,
-					&s.SupplierFIO,
-					&s.EmployeeID,
-					&s.EmployeeFIO,
-					&s.Date,
-					&s.ProductBarcode,
-					&s.ProductAmount,
-				)
-				if err != nil {
-					utils.BindDatabaseError(ctx, err, "cannot get shipments")
-					return
-				}
-				shipsClick = append(shipsClick, *s)
-			}
-			if err = resultClick.Err(); err != nil {
-				utils.BindDatabaseError(ctx, resultClick.Err(), "cannot get shipments")
-				return
-			}
-
-			utils.BindData(ctx, shipsClick)
+			ships = append(ships, *s)
+		}
+		if err = resultClick.Err(); err != nil {
+			utils.BindDatabaseError(ctx, resultClick.Err(), "cannot get shipments")
 			return
 		}
+
 		utils.BindData(ctx, ships)
 	}
 }

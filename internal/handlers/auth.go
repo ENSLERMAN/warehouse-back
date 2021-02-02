@@ -20,13 +20,13 @@ func Login(db *sql.DB) func(ctx *gin.Context) {
 		}
 
 		result := db.QueryRow(`select login, password from warehouse.users where login = $1;`, user.Login)
-		if err := result.Err(); err != nil {
+		if err = result.Err(); err != nil {
 			utils.BindUnauthorized(ctx, err, "")
 			return
 		}
 		dbUser := &models.User{}
 		if err = result.Scan(&dbUser.Login, &dbUser.Password); err != nil {
-			utils.BindUnauthorized(ctx, err, "error in scan sql row")
+			utils.BindUnauthorized(ctx, err, "Пользователя нет в базе данных")
 			return
 		}
 
@@ -51,7 +51,7 @@ func Login(db *sql.DB) func(ctx *gin.Context) {
 			AccessName string `json:"access_name" db:"access_name"`
 		}
 
-		if err := result1.Scan(
+		if err = result1.Scan(
 			&dbRes.UserID,
 			&dbRes.Surname,
 			&dbRes.Name,

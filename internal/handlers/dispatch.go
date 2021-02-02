@@ -168,12 +168,14 @@ func GetHistoryDispatches(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 			EmpSurname   *string `json:"emp_surname" db:"emp_surname"`
 			EmpName      *string `json:"emp_name" db:"emp_name"`
 			EmpPat       *string `json:"emp_pat" db:"emp_pat"`
+			EmpFIO       *string `json:"emp_fio" db:"emp_fio"`
 			StatusID     int64   `json:"status_id" db:"status_id"`
 			StatusName   string  `json:"status_name" db:"status_name"`
 			CusID        int64   `json:"cus_id" db:"cus_id"`
 			CusSurname   string  `json:"cus_surname" db:"cus_surname"`
 			CusName      string  `json:"cus_name" db:"cus_name"`
 			CusPat       string  `json:"cus_pat" db:"cus_pat"`
+			CusFIO       string  `json:"cus_fio" db:"cus_fio"`
 		}
 
 		result, err := db.Query(`select * from warehouse.get_history_dispatches();`)
@@ -204,47 +206,31 @@ func GetHistoryDispatches(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 			dispatches = append(dispatches, *dis)
 		}
 
-		if len(dispatches) == 0 {
-			type dispatchClick struct {
-				DisID        int64   `json:"dispatch_id" db:"dispatch_id"`
-				DispatchDate string  `json:"dispatch_date" db:"dispatch_date"`
-				EmpID        *int64  `json:"emp_id" db:"emp_id"`
-				EmpFIO       *string `json:"emp_fio" db:"emp_fio"`
-				StatusID     int64   `json:"status_id" db:"status_id"`
-				StatusName   string  `json:"status_name" db:"status_name"`
-				CusID        int64   `json:"cus_id" db:"cus_id"`
-				CusFIO       string  `json:"cus_fio" db:"cus_fio"`
-			}
-
-			resultClick, err := clickDB.Query(`
+		resultClick, err := clickDB.Query(`
 				select
 					dispatch_id, dispatch_date, emp_id, emp_fio, status_id, status_name, customer_id, customer_fio
 				from warehouse.dispatch_history;
 			`)
-			if err != nil {
+		if err != nil {
+			utils.BindDatabaseError(ctx, err, "cannot get dispatches from clickhouse")
+			return
+		}
+		for resultClick.Next() {
+			dis := new(dispatch)
+			if err := resultClick.Scan(
+				&dis.DisID,
+				&dis.DispatchDate,
+				&dis.EmpID,
+				&dis.EmpFIO,
+				&dis.StatusID,
+				&dis.StatusName,
+				&dis.CusID,
+				&dis.CusFIO,
+			); err != nil {
 				utils.BindDatabaseError(ctx, err, "cannot get dispatches from clickhouse")
 				return
 			}
-			dispatchesClick := make([]dispatchClick, 0)
-			for resultClick.Next() {
-				dis := new(dispatchClick)
-				if err := resultClick.Scan(
-					&dis.DisID,
-					&dis.DispatchDate,
-					&dis.EmpID,
-					&dis.EmpFIO,
-					&dis.StatusID,
-					&dis.StatusName,
-					&dis.CusID,
-					&dis.CusFIO,
-				); err != nil {
-					utils.BindDatabaseError(ctx, err, "cannot get dispatches from clickhouse")
-					return
-				}
-				dispatchesClick = append(dispatchesClick, *dis)
-			}
-			utils.BindData(ctx, dispatchesClick)
-			return
+			dispatches = append(dispatches, *dis)
 		}
 
 		utils.BindData(ctx, dispatches)

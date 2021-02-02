@@ -17,13 +17,13 @@ func StartServer() *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(gin.Logger())
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:4200"},
+		AllowOrigins:     []string{"http://enslerman.ru"},
 		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "x-requested-with", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:4200"
+			return origin == "http://enslerman.ru"
 		},
 		MaxAge: 12 * time.Hour,
 	}))

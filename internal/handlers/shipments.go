@@ -98,15 +98,15 @@ func GetAllShipments(db *sql.DB) func(ctx *gin.Context) {
 	}
 }
 
-func GetShipmentsHistory(db *sql.DB) func(ctx *gin.Context) {
+func GetShipmentsHistory(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		type shipment struct {
-			Id              int64  `json:"id" db:"id"`
-			SupplierId      int64  `json:"supplier_id" db:"supplier_id"`
+			ID              int64  `json:"id" db:"id"`
+			SupplierID      int64  `json:"supplier_id" db:"supplier_id"`
 			SupplierSurname string `json:"supplier_surname" db:"supplier_surname"`
 			SupplierName    string `json:"supplier_name" db:"supplier_name"`
 			SupplierPat     string `json:"supplier_pat" db:"supplier_pat"`
-			EmployeeId      int64  `json:"employee_id" db:"employee_id"`
+			EmployeeID      int64  `json:"employee_id" db:"employee_id"`
 			EmployeeSurname string `json:"employee_surname" db:"employee_surname"`
 			EmployeeName    string `json:"employee_name" db:"employee_name"`
 			EmployeePat     string `json:"employee_pat" db:"employee_pat"`
@@ -123,7 +123,7 @@ func GetShipmentsHistory(db *sql.DB) func(ctx *gin.Context) {
 		ships := make([]shipment, 0)
 		for result.Next() {
 			s := new(shipment)
-			err := result.Scan(&s.Id, &s.SupplierId, &s.SupplierSurname, &s.SupplierName, &s.SupplierPat, &s.EmployeeId,
+			err := result.Scan(&s.ID, &s.SupplierID, &s.SupplierSurname, &s.SupplierName, &s.SupplierPat, &s.EmployeeID,
 				&s.EmployeeSurname, &s.EmployeeName, &s.EmployeePat, &s.Date, &s.ProductBarcode, &s.ProductAmount,
 			)
 			if err != nil {
@@ -134,8 +134,57 @@ func GetShipmentsHistory(db *sql.DB) func(ctx *gin.Context) {
 		}
 		if err = result.Err(); err != nil {
 			utils.BindDatabaseError(ctx, result.Err(), "cannot get shipments")
+			return
 		}
 
+		if len(ships) == 0 {
+			type shipmentClick struct {
+				ID             int64  `json:"id" db:"ship_id"`
+				SupplierID     int64  `json:"supplier_id" db:"supplier_id"`
+				SupplierFIO    string `json:"supplier_fio" db:"supplier_fio"`
+				EmployeeID     int64  `json:"employee_id" db:"employee_id"`
+				EmployeeFIO    string `json:"employee_fio" db:"employee_fio"`
+				Date           string `json:"date" db:"date"`
+				ProductBarcode string `json:"product_barcode" db:"product_barcode"`
+				ProductAmount  int    `json:"product_amount" db:"product_amount"`
+			}
+
+			resultClick, err := clickDB.Query(`
+				select 
+				ship_id, supplier_id, supplier_fio, employee_id, employee_fio, date, product_barcode, product_amount
+				from warehouse.shipment_history;
+			`)
+			if err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get shipments")
+				return
+			}
+			shipsClick := make([]shipmentClick, 0)
+			for resultClick.Next() {
+				s := new(shipmentClick)
+				err = resultClick.Scan(
+					&s.ID,
+					&s.SupplierID,
+					&s.SupplierFIO,
+					&s.EmployeeID,
+					&s.EmployeeFIO,
+					&s.Date,
+					&s.ProductBarcode,
+					&s.ProductAmount,
+				)
+				if err != nil {
+					utils.BindDatabaseError(ctx, err, "cannot get shipments")
+					return
+				}
+				shipsClick = append(shipsClick, *s)
+			}
+			if err = resultClick.Err(); err != nil {
+				utils.BindDatabaseError(ctx, resultClick.Err(), "cannot get shipments")
+				return
+			}
+
+			utils.BindData(ctx, shipsClick)
+			return
+		}
 		utils.BindData(ctx, ships)
 	}
 }

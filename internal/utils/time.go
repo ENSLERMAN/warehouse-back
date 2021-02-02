@@ -9,3 +9,11 @@ func GetNowByMoscow() string {
 	}
 	return time.Now().In(loc).Format(time.RFC3339)
 }
+
+func GetTimeNowByMoscow() time.Time {
+	loc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		loc = time.UTC
+	}
+	return time.Now().In(loc)
+}

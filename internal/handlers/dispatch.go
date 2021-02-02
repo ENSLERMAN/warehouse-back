@@ -9,6 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	jsoniter "github.com/json-iterator/go"
 	"strconv"
+	"time"
 )
 
 func AddNewDispatch(db *sql.DB) func(ctx *gin.Context) {
@@ -41,6 +42,16 @@ func AddNewDispatch(db *sql.DB) func(ctx *gin.Context) {
 		disJSON, err := jsoniter.Marshal(&dis)
 		if err != nil {
 			utils.BindValidationError(ctx, err, "body validation error")
+			return
+		}
+		loc, err := time.LoadLocation("Europe/Moscow")
+		if err != nil {
+			loc = time.UTC
+		}
+
+		_, err = time.ParseInLocation(time.RFC3339, dis.DateCreate, loc)
+		if err != nil {
+			utils.BindValidationError(ctx, err, "Ошибка валидации даты")
 			return
 		}
 
@@ -148,7 +159,7 @@ func GetDispatches(db *sql.DB) func(ctx *gin.Context) {
 	}
 }
 
-func GetHistoryDispatches(db *sql.DB) func(ctx *gin.Context) {
+func GetHistoryDispatches(db *sql.DB, clickDB *sql.DB) func(ctx *gin.Context) {
 	return func(ctx *gin.Context) {
 		type dispatch struct {
 			DisID        int64   `json:"dispatch_id" db:"dispatch_id"`
@@ -192,6 +203,50 @@ func GetHistoryDispatches(db *sql.DB) func(ctx *gin.Context) {
 			}
 			dispatches = append(dispatches, *dis)
 		}
+
+		if len(dispatches) == 0 {
+			type dispatchClick struct {
+				DisID        int64   `json:"dispatch_id" db:"dispatch_id"`
+				DispatchDate string  `json:"dispatch_date" db:"dispatch_date"`
+				EmpID        *int64  `json:"emp_id" db:"emp_id"`
+				EmpFIO       *string `json:"emp_fio" db:"emp_fio"`
+				StatusID     int64   `json:"status_id" db:"status_id"`
+				StatusName   string  `json:"status_name" db:"status_name"`
+				CusID        int64   `json:"cus_id" db:"cus_id"`
+				CusFIO       string  `json:"cus_fio" db:"cus_fio"`
+			}
+
+			resultClick, err := clickDB.Query(`
+				select
+					dispatch_id, dispatch_date, emp_id, emp_fio, status_id, status_name, customer_id, customer_fio
+				from warehouse.dispatch_history;
+			`)
+			if err != nil {
+				utils.BindDatabaseError(ctx, err, "cannot get dispatches from clickhouse")
+				return
+			}
+			dispatchesClick := make([]dispatchClick, 0)
+			for resultClick.Next() {
+				dis := new(dispatchClick)
+				if err := resultClick.Scan(
+					&dis.DisID,
+					&dis.DispatchDate,
+					&dis.EmpID,
+					&dis.EmpFIO,
+					&dis.StatusID,
+					&dis.StatusName,
+					&dis.CusID,
+					&dis.CusFIO,
+				); err != nil {
+					utils.BindDatabaseError(ctx, err, "cannot get dispatches from clickhouse")
+					return
+				}
+				dispatchesClick = append(dispatchesClick, *dis)
+			}
+			utils.BindData(ctx, dispatchesClick)
+			return
+		}
+
 		utils.BindData(ctx, dispatches)
 	}
 }

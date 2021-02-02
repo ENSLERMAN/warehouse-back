@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="ensler@localhost" uuid="5550d0a7-f907-4282-ad18-8af3663a4275">
+    <data-source source="LOCAL" name="postgres@backend.enslerman.ru" uuid="7ddd65bb-3b00-47de-a603-e9380c188dd8">
       <driver-ref>postgresql</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>org.postgresql.Driver</jdbc-driver>
-      <jdbc-url>jdbc:postgresql://localhost:5432/ensler</jdbc-url>
+      <jdbc-url>jdbc:postgresql://backend.enslerman.ru:5435/postgres</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="warehouse@backend.enslerman.ru" uuid="03ba423e-b627-45ba-9a44-180f595f3073">
+      <driver-ref>clickhouse</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>ru.yandex.clickhouse.ClickHouseDriver</jdbc-driver>
+      <jdbc-url>jdbc:clickhouse://backend.enslerman.ru:8123/warehouse</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
   </component>
